@@ -31,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
     private String displayInfo = "屏幕参数：读取中";
     private String webViewInfo = "WebView：等待页面加载";
     private String pageInfo = "网页视口：等待页面加载";
+    private boolean diagnosticMode = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,16 +108,15 @@ public class MainActivity extends AppCompatActivity {
 
         diagnosticView = new TextView(this);
         diagnosticView.setTextColor(Color.WHITE);
-        diagnosticView.setTextSize(16);
-        diagnosticView.setGravity(android.view.Gravity.START);
-        diagnosticView.setPadding(18, 14, 18, 14);
-        diagnosticView.setBackgroundColor(0xD9000000);
-        diagnosticView.setElevation(20f);
+        diagnosticView.setTextSize(24);
+        diagnosticView.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        diagnosticView.setPadding(60, 40, 60, 40);
+        diagnosticView.setBackgroundColor(Color.BLACK);
+        diagnosticView.setElevation(100f);
+        diagnosticView.setFocusable(false);
         FrameLayout.LayoutParams diagnosticParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                android.view.Gravity.TOP | android.view.Gravity.END);
-        diagnosticParams.setMargins(0, 12, 12, 0);
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT);
         root.addView(diagnosticView, diagnosticParams);
         updateDiagnosticView();
 
@@ -172,14 +172,21 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateDiagnosticView() {
         if (diagnosticView != null) {
-            diagnosticView.setText("【诊断信息】\n" + displayInfo + "\n"
-                    + webViewInfo + "\n" + pageInfo
-                    + "\n拍照发给 ChatGPT 分析");
+            diagnosticView.setText("生产看板诊断信息\n\n" + displayInfo + "\n\n"
+                    + webViewInfo + "\n\n" + pageInfo
+                    + "\n\n请等待网页加载几秒后拍照发给 ChatGPT。"
+                    + "\n按遥控器【确认/OK】键进入看板。");
         }
     }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (diagnosticMode && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER
+                || keyCode == KeyEvent.KEYCODE_ENTER)) {
+            diagnosticMode = false;
+            diagnosticView.setVisibility(View.GONE);
+            return true;
+        }
         if (loadFailed && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER
                 || keyCode == KeyEvent.KEYCODE_ENTER)) {
             webView.reload();
