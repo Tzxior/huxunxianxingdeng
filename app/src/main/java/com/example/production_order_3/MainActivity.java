@@ -3,7 +3,6 @@ package com.example.production_order_3;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -32,13 +31,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // 仅调整本应用的显示密度，使 1920×1080 的应用窗口对应 1920×1080 CSS 视口。
-        // 不修改电视系统的全局分辨率或密度。
-        DisplayMetrics appMetrics = getResources().getDisplayMetrics();
-        appMetrics.density = 1.0f;
-        appMetrics.densityDpi = DisplayMetrics.DENSITY_MEDIUM;
-        appMetrics.scaledDensity = 1.0f;
-
+        // 不修改应用 DisplayMetrics：避免 WebView、Android 布局与网页 viewport 使用不同的缩放基准。
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_FULLSCREEN
@@ -126,10 +119,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void logDisplayInfo() {
-        DisplayMetrics metrics = new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
-        Log.d(TAG, "Display pixels=" + metrics.widthPixels + "x" + metrics.heightPixels
-                + ", density=" + metrics.density + ", densityDpi=" + metrics.densityDpi);
+        DisplayMetricsHolder.log(this, TAG);
     }
 
     private void logWebViewInfo() {
@@ -168,6 +158,15 @@ public class MainActivity extends AppCompatActivity {
             webView.goBack();
         } else {
             super.onBackPressed();
+        }
+    }
+
+    private static final class DisplayMetricsHolder {
+        static void log(android.content.Context context, String tag) {
+            android.util.DisplayMetrics metrics = new android.util.DisplayMetrics();
+            context.getDisplay().getRealMetrics(metrics);
+            Log.d(tag, "Display pixels=" + metrics.widthPixels + "x" + metrics.heightPixels
+                    + ", density=" + metrics.density + ", densityDpi=" + metrics.densityDpi);
         }
     }
 }
