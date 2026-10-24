@@ -5,7 +5,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.Display;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -28,15 +27,18 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private TextView statusView;
     private boolean loadFailed = false;
-    private TextView diagnosticView;
-    private String displayInfo = "屏幕参数：读取中";
-    private String webViewInfo = "WebView：等待页面加载";
-    private String pageInfo = "网页视口：等待页面加载";
-    private boolean diagnosticMode = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // 仅调整本应用的显示密度，使 1920×1080 的应用窗口对应 1920×1080 CSS 视口。
+        // 不修改电视系统的全局分辨率或密度。
+        DisplayMetrics appMetrics = getResources().getDisplayMetrics();
+        appMetrics.density = 1.0f;
+        appMetrics.densityDpi = DisplayMetrics.DENSITY_MEDIUM;
+        appMetrics.scaledDensity = 1.0f;
+
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         getWindow().getDecorView().setSystemUiVisibility(
                 View.SYSTEM_UI_FLAG_FULLSCREEN
@@ -57,17 +59,14 @@ public class MainActivity extends AppCompatActivity {
         settings.setDomStorageEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(true); // Fit wide desktop pages to the visible WebView width
+        settings.setLoadWithOverviewMode(false);
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         settings.setTextZoom(100);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
-        // The app window is already hardware-accelerated in AndroidManifest.xml.
-        // Avoid forcing an extra hardware layer, which may be composited as a scaled texture
-        // on TVs whose app surface is rendered below the panel resolution.
-        webView.setLayerType(View.LAYER_TYPE_NONE, null);
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         webView.setBackgroundColor(Color.BLACK);
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
@@ -110,20 +109,6 @@ public class MainActivity extends AppCompatActivity {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
 
-        diagnosticView = new TextView(this);
-        diagnosticView.setTextColor(Color.WHITE);
-        diagnosticView.setTextSize(24);
-        diagnosticView.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        diagnosticView.setPadding(60, 40, 60, 40);
-        diagnosticView.setBackgroundColor(Color.BLACK);
-        diagnosticView.setElevation(100f);
-        diagnosticView.setFocusable(false);
-        FrameLayout.LayoutParams diagnosticParams = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT);
-        root.addView(diagnosticView, diagnosticParams);
-        updateDiagnosticView();
-
         webView.loadUrl(PAGE_URL);
     }
 
@@ -140,37 +125,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @SuppressWarnings("deprecation")
     private void logDisplayInfo() {
-        Display display = getWindowManager().getDefaultDisplay();
         DisplayMetrics metrics = new DisplayMetrics();
-        display.getRealMetrics(metrics);
-        StringBuilder info = new StringBuilder();
-        info.append("设备：").append(Build.MANUFACTURER).append(" ").append(Build.MODEL)
-                .append("\n应用逻辑尺寸：").append(metrics.widthPixels).append(" × ").append(metrics.heightPixels)
-                .append("\ndensity：").append(metrics.density)
-                .append("\ndensityDpi：").append(metrics.densityDpi);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Display.Mode current = display.getMode();
-            info.append("\n\n当前显示模式：").append(current.getPhysicalWidth()).append(" × ")
-                    .append(current.getPhysicalHeight()).append(" @ ").append(current.getRefreshRate()).append(" Hz");
-            info.append("\n支持的显示模式：");
-            for (Display.Mode mode : display.getSupportedModes()) {
-                info.append("\n").append(mode.getPhysicalWidth()).append(" × ")
-                        .append(mode.getPhysicalHeight()).append(" @ ").append(mode.getRefreshRate()).append(" Hz");
-            }
-        }
-        displayInfo = info.toString();
-        Log.d(TAG, displayInfo);
-        updateDiagnosticView();
+        getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
+        Log.d(TAG, "Display pixels=" + metrics.widthPixels + "x" + metrics.heightPixels
+                + ", density=" + metrics.density + ", densityDpi=" + metrics.densityDpi);
     }
 
     private void logWebViewInfo() {
         webView.post(() -> {
-            webViewInfo = "WebView 实际尺寸：" + webView.getWidth() + " × " + webView.getHeight()
-                    + "\nWebView scale：" + webView.getScale()
-                    + "\n网页内容高度：" + webView.getContentHeight();
-            updateDiagnosticView();
             Log.d(TAG, "WebView size=" + webView.getWidth() + "x" + webView.getHeight()
                     + ", scale=" + webView.getScale()
                     + ", contentHeight=" + webView.getContentHeight());
@@ -179,31 +142,13 @@ public class MainActivity extends AppCompatActivity {
                         "JSON.stringify({innerWidth:innerWidth,innerHeight:innerHeight,"
                                 + "devicePixelRatio:devicePixelRatio,"
                                 + "screenWidth:screen.width,screenHeight:screen.height})",
-                        value -> {
-                            pageInfo = "网页视口（JSON）：\n" + value;
-                            updateDiagnosticView();
-                            Log.d(TAG, "Page viewport=" + value);
-                        });
+                        value -> Log.d(TAG, "Page viewport=" + value));
             }
         });
     }
 
-    private void updateDiagnosticView() {
-        if (diagnosticView != null) {
-            diagnosticView.setText("显示诊断\n\n" + displayInfo + "\n\n"
-                    + webViewInfo + "\n\n" + pageInfo
-                    + "\n按遥控器【确认/OK】键进入看板。");
-        }
-    }
-
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (diagnosticMode && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER
-                || keyCode == KeyEvent.KEYCODE_ENTER)) {
-            diagnosticMode = false;
-            diagnosticView.setVisibility(View.GONE);
-            return true;
-        }
         if (loadFailed && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER
                 || keyCode == KeyEvent.KEYCODE_ENTER)) {
             webView.reload();
