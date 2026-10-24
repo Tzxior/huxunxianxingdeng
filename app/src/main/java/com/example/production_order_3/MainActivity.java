@@ -64,7 +64,10 @@ public class MainActivity extends AppCompatActivity {
         settings.setTextZoom(100);
         settings.setCacheMode(WebSettings.LOAD_DEFAULT);
 
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        // The app window is already hardware-accelerated in AndroidManifest.xml.
+        // Avoid forcing an extra hardware layer, which may be composited as a scaled texture
+        // on TVs whose app surface is rendered below the panel resolution.
+        webView.setLayerType(View.LAYER_TYPE_NONE, null);
         webView.setBackgroundColor(Color.BLACK);
         webView.setWebChromeClient(new WebChromeClient());
         webView.setWebViewClient(new WebViewClient() {
