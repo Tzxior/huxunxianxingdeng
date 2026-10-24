@@ -27,6 +27,10 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private TextView statusView;
     private boolean loadFailed = false;
+    private TextView diagnosticView;
+    private String displayInfo = "屏幕参数：读取中";
+    private String webViewInfo = "WebView：等待页面加载";
+    private String pageInfo = "网页视口：等待页面加载";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,6 +105,21 @@ public class MainActivity extends AppCompatActivity {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
 
+        diagnosticView = new TextView(this);
+        diagnosticView.setTextColor(Color.WHITE);
+        diagnosticView.setTextSize(16);
+        diagnosticView.setGravity(android.view.Gravity.START);
+        diagnosticView.setPadding(18, 14, 18, 14);
+        diagnosticView.setBackgroundColor(0xD9000000);
+        diagnosticView.setElevation(20f);
+        FrameLayout.LayoutParams diagnosticParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                android.view.Gravity.TOP | android.view.Gravity.END);
+        diagnosticParams.setMargins(0, 12, 12, 0);
+        root.addView(diagnosticView, diagnosticParams);
+        updateDiagnosticView();
+
         webView.loadUrl(PAGE_URL);
     }
 
@@ -120,12 +139,20 @@ public class MainActivity extends AppCompatActivity {
     private void logDisplayInfo() {
         DisplayMetrics metrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
+        displayInfo = "屏幕物理像素：" + metrics.widthPixels + " × " + metrics.heightPixels
+                + "\n系统 density：" + metrics.density
+                + "\ndensityDpi：" + metrics.densityDpi;
         Log.d(TAG, "Display pixels=" + metrics.widthPixels + "x" + metrics.heightPixels
                 + ", density=" + metrics.density + ", densityDpi=" + metrics.densityDpi);
+        updateDiagnosticView();
     }
 
     private void logWebViewInfo() {
         webView.post(() -> {
+            webViewInfo = "WebView 实际尺寸：" + webView.getWidth() + " × " + webView.getHeight()
+                    + "\nWebView scale：" + webView.getScale()
+                    + "\n网页内容高度：" + webView.getContentHeight();
+            updateDiagnosticView();
             Log.d(TAG, "WebView size=" + webView.getWidth() + "x" + webView.getHeight()
                     + ", scale=" + webView.getScale()
                     + ", contentHeight=" + webView.getContentHeight());
@@ -134,9 +161,21 @@ public class MainActivity extends AppCompatActivity {
                         "JSON.stringify({innerWidth:innerWidth,innerHeight:innerHeight,"
                                 + "devicePixelRatio:devicePixelRatio,"
                                 + "screenWidth:screen.width,screenHeight:screen.height})",
-                        value -> Log.d(TAG, "Page viewport=" + value));
+                        value -> {
+                            pageInfo = "网页视口（JSON）：\n" + value;
+                            updateDiagnosticView();
+                            Log.d(TAG, "Page viewport=" + value);
+                        });
             }
         });
+    }
+
+    private void updateDiagnosticView() {
+        if (diagnosticView != null) {
+            diagnosticView.setText("【诊断信息】\n" + displayInfo + "\n"
+                    + webViewInfo + "\n" + pageInfo
+                    + "\n拍照发给 ChatGPT 分析");
+        }
     }
 
     @Override
