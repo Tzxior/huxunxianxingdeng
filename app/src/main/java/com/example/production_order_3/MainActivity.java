@@ -5,6 +5,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Display;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -136,14 +137,28 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @SuppressWarnings("deprecation")
     private void logDisplayInfo() {
+        Display display = getWindowManager().getDefaultDisplay();
         DisplayMetrics metrics = new DisplayMetrics();
-        getWindowManager().getDefaultDisplay().getRealMetrics(metrics);
-        displayInfo = "屏幕物理像素：" + metrics.widthPixels + " × " + metrics.heightPixels
-                + "\n系统 density：" + metrics.density
-                + "\ndensityDpi：" + metrics.densityDpi;
-        Log.d(TAG, "Display pixels=" + metrics.widthPixels + "x" + metrics.heightPixels
-                + ", density=" + metrics.density + ", densityDpi=" + metrics.densityDpi);
+        display.getRealMetrics(metrics);
+        StringBuilder info = new StringBuilder();
+        info.append("设备：").append(Build.MANUFACTURER).append(" ").append(Build.MODEL)
+                .append("\n应用逻辑尺寸：").append(metrics.widthPixels).append(" × ").append(metrics.heightPixels)
+                .append("\ndensity：").append(metrics.density)
+                .append("\ndensityDpi：").append(metrics.densityDpi);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Display.Mode current = display.getMode();
+            info.append("\n\n当前显示模式：").append(current.getPhysicalWidth()).append(" × ")
+                    .append(current.getPhysicalHeight()).append(" @ ").append(current.getRefreshRate()).append(" Hz");
+            info.append("\n支持的显示模式：");
+            for (Display.Mode mode : display.getSupportedModes()) {
+                info.append("\n").append(mode.getPhysicalWidth()).append(" × ")
+                        .append(mode.getPhysicalHeight()).append(" @ ").append(mode.getRefreshRate()).append(" Hz");
+            }
+        }
+        displayInfo = info.toString();
+        Log.d(TAG, displayInfo);
         updateDiagnosticView();
     }
 
@@ -172,9 +187,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateDiagnosticView() {
         if (diagnosticView != null) {
-            diagnosticView.setText("生产看板诊断信息\n\n" + displayInfo + "\n\n"
+            diagnosticView.setText("显示诊断\n\n" + displayInfo + "\n\n"
                     + webViewInfo + "\n\n" + pageInfo
-                    + "\n\n请等待网页加载几秒后拍照发给 ChatGPT。"
                     + "\n按遥控器【确认/OK】键进入看板。");
         }
     }
