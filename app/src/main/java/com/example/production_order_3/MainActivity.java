@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setDomStorageEnabled(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(false);
+        settings.setLoadWithOverviewMode(true); // Fit wide desktop pages to the visible WebView width
         settings.setSupportZoom(false);
         settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
